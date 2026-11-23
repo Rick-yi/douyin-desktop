@@ -128,6 +128,23 @@ sudo -u zmtjl -H bash -lc 'cd /opt/zmtjl/app/server && mvn -DskipTests package'
 
 > 第一次构建会下载 Maven 依赖，耐心等待。国内网络慢可以配置 Maven 镜像。
 
+
+### 4.1 直接用 Release jar（可选）
+
+不想在服务器上装 Maven 时，可以从 Release 下载：
+
+```bash
+wget -O /opt/zmtjl/app/server/target/license-server-1.0.0.jar   https://github.com/Rick-yi/douyin-desktop/releases/download/v1.0.1/license-server-1.0.0.jar
+```
+
+校验：
+
+```bash
+sha256sum /opt/zmtjl/app/server/target/license-server-1.0.0.jar
+# 期望：6a58323c8d42439af153e370f192b7b43b6647610be91d4be3776cd71df99ba2
+```
+
+
 ---
 
 ## 5. 配置 `.env`
