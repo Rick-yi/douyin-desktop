@@ -13,6 +13,16 @@
 | MySQL | 8.0+ |
 | Docker | 可选 |
 
+
+## 1.1 获取构建
+
+- Release：`license-server-1.0.0.jar`
+  - SHA-256：`6a58323c8d42439af153e370f192b7b43b6647610be91d4be3776cd71df99ba2`
+- GitHub Packages（Maven）：
+  - `com.zmtjl:license-server:1.0.0`
+  - `https://maven.pkg.github.com/Rick-yi/douyin-desktop`
+  - 拉取需要 PAT（`read:packages`）；只运行服务端建议直接用 Release jar。
+
 ## 2. 快速开始
 
 ### 2.1 建数据库
