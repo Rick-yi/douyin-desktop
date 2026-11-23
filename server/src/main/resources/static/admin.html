@@ -1,0 +1,1287 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<script>
+  // 未登录不渲染后台；旧版本写入 localStorage 的令牌一并清理
+  try { localStorage.removeItem('licenseAdminToken'); } catch {}
+  if (!sessionStorage.getItem('licenseAdminToken')) location.replace('/login.html');
+</script>
+<title>授权服务管理</title>
+<style>
+  :root { --bg:#f5f6f8; --card:#fff; --border:#e3e8ef; --text:#1f2329; --muted:#6b7280; --primary:#2f6fd0; --danger:#c0392b; --ok:#1a7f37; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+         background:var(--bg); color:var(--text); font-size:13px; }
+  header { display:flex; align-items:center; justify-content:space-between; padding:12px 20px;
+           background:#fff; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:5; }
+  .brand { font-size:16px; font-weight:600; }
+  .conn { display:flex; align-items:center; gap:8px; }
+  .conn #conn-label { color:var(--muted); font-size:12px; }
+  .conn input { width:260px; height:30px; padding:0 10px; border:1px solid var(--border); border-radius:4px; font-size:12px; outline:none; }
+  .conn input:focus { border-color:var(--primary); }
+  .dot { width:8px; height:8px; border-radius:50%; background:#c9ced6; }
+  .dot.on { background:var(--ok); box-shadow:0 0 0 3px #e8f8ee; }
+  nav { display:flex; gap:6px; padding:10px 20px 0; }
+  nav button { height:32px; padding:0 16px; border:1px solid var(--border); background:#fff; border-radius:4px; font-size:13px; cursor:pointer; }
+  nav button.active { border-color:var(--primary); color:var(--primary); background:#f0f6ff; }
+  main { padding:14px 20px 40px; max-width:1280px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin-bottom:12px; }
+  .card h3 { margin:0 0 10px; font-size:13px; font-weight:600; }
+  .card-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .card-head h3 { margin:0; }
+  .row, .form-row { display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+  .form-row label { display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--muted); }
+  .form-row label.check { flex-direction:row; align-items:center; gap:5px; white-space:nowrap; }
+  input[type=file] { font-size:12px; }
+  input, select { height:30px; padding:0 8px; border:1px solid var(--border); border-radius:4px;
+                  font-size:12px; background:#fff; outline:none; }
+  input:focus, select:focus { border-color:var(--primary); }
+  button { height:30px; padding:0 12px; border:1px solid var(--border); border-radius:4px;
+           background:#fff; font-size:12px; cursor:pointer; }
+  button:hover { background:#f8fafc; }
+  button.primary { background:var(--primary); border-color:var(--primary); color:#fff; }
+  button.danger { border-color:#ffc9c9; color:var(--danger); }
+  button.mini { height:24px; padding:0 8px; font-size:11px; margin-right:4px; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th { text-align:left; font-weight:500; color:var(--muted); background:#fafbfc;
+       padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  td { padding:7px 10px; border-bottom:1px solid #f2f3f5; vertical-align:middle; }
+  tr:hover td { background:#fafbfc; }
+  .mono { font-family:ui-monospace, Consolas, monospace; font-size:11px; }
+  .tag { display:inline-block; font-size:11px; padding:0 6px; border-radius:3px; background:#f0f1f4; color:var(--muted); }
+  .tag.ok { background:#e8f8ee; color:var(--ok); }
+  .tag.warn { background:#fff4e5; color:#b76e00; }
+  .tag.off { background:#fdeaea; color:var(--danger); }
+  .tag.info { background:#eef4ff; color:var(--primary); }
+  .hidden { display:none !important; }
+  .hint { color:var(--muted); font-size:11px; line-height:1.7; margin:8px 0 0; }
+  .empty { padding:26px 0; text-align:center; color:var(--muted); }
+  .result { margin-top:12px; background:#0f172a; color:#e2e8f0; padding:12px; border-radius:6px;
+            font-family:ui-monospace, Consolas, monospace; font-size:12px; white-space:pre-wrap; word-break:break-all; }
+  #toast { position:fixed; top:14px; left:50%; transform:translateX(-50%); padding:8px 16px; border-radius:4px;
+           background:#1f2937; color:#fff; font-size:12px; opacity:0; transition:opacity .2s; pointer-events:none; z-index:20; }
+  #toast.show { opacity:1; }
+  #toast.err { background:var(--danger); }
+  #modal { position:fixed; inset:0; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; z-index:30; }
+  .modal-box { background:#fff; border-radius:8px; padding:18px 20px; min-width:520px; max-width:860px; max-height:80vh; overflow:auto; }
+  .modal-box h3 { margin:0 0 10px; font-size:14px; }
+  .modal-box .body { font-size:12px; line-height:1.7; }
+  .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
+  .check-grid { display:flex; flex-wrap:wrap; gap:8px 16px; max-width:820px; }
+  .check-grid label { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); white-space:nowrap; }
+  .check-grid input { height:auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">授权服务管理</div>
+  <div class="conn">
+    <span id="status" class="dot" title="已登录"></span>
+    <span id="conn-label">已登录</span>
+    <button id="logout">退出登录</button>
+  </div>
+</header>
+
+<nav>
+  <button data-tab="keys" class="active">卡密</button>
+  <button data-tab="orders">订单</button>
+  <button data-tab="products">商品</button>
+  <button data-tab="plans">套餐</button>
+  <button data-tab="jump">跳转卡</button>
+  <button data-tab="release">版本发布</button>
+</nav>
+
+<main>
+  <!-- 卡密 -->
+  <section id="panel-keys">
+    <div class="card">
+      <h3>生成卡密</h3>
+      <div class="form-row">
+        <label>套餐
+          <select id="gen-plan">
+            <option value="">加载中…</option>
+          </select>
+        </label>
+        <label>数量 <input id="gen-count" type="number" value="10" min="1" max="1000" style="width:80px"></label>
+        <label>天数（可选） <input id="gen-days" type="number" min="1" placeholder="套餐默认" style="width:100px"></label>
+        <label>批次 <input id="gen-batch" placeholder="如 2026-11-A" style="width:160px"></label>
+        <button id="gen-btn" class="primary">生成</button>
+      </div>
+      <p class="hint">卡密明文只在这里显示一次，数据库只存哈希。生成后立刻复制保存。</p>
+      <div id="gen-result" class="result hidden"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>卡密列表</h3>
+        <div class="row">
+          <input id="batch-filter" placeholder="按批次筛选 / 批量操作" style="width:210px">
+          <button id="batch-export">导出批次</button>
+          <button id="batch-extend">整批延期</button>
+          <button id="batch-revoke" class="danger">整批作废</button>
+          <button id="reload-keys">刷新</button>
+        </div>
+      </div>
+      <div id="keys-wrap"><div class="empty">请先连接</div></div>
+    </div>
+  </section>
+
+  <!-- 订单 -->
+  <section id="panel-orders" class="hidden">
+    <div class="card">
+      <div class="card-head">
+        <h3>订单</h3>
+        <div class="row">
+          <select id="order-status">
+            <option value="">全部状态</option>
+            <option value="created">待支付</option>
+            <option value="paid">已支付</option>
+            <option value="refunded">已退款</option>
+            <option value="cancelled">已取消</option>
+            <option value="closed">已关闭</option>
+          </select>
+          <button id="reload-orders">刷新</button>
+        </div>
+      </div>
+      <div id="orders-wrap"><div class="empty">请先连接</div></div>
+    </div>
+  </section>
+
+  <!-- 商品 -->
+  <section id="panel-products" class="hidden">
+    <div class="card">
+      <h3 id="prod-form-title">新增商品</h3>
+      <div class="form-row">
+        <input id="prod-id" type="hidden">
+        <label>编码 <input id="prod-code" placeholder="pro-1y" style="width:130px"></label>
+        <label>名称 <input id="prod-name" placeholder="专业版 · 365 天" style="width:180px"></label>
+        <label>套餐
+          <select id="prod-plan">
+            <option value="">加载中…</option>
+          </select>
+        </label>
+        <label>价格（元） <input id="prod-price" type="number" step="0.01" min="0.01" style="width:100px"></label>
+        <label>天数（可选） <input id="prod-days" type="number" min="1" placeholder="套餐默认" style="width:100px"></label>
+        <label>状态
+          <select id="prod-status">
+            <option value="active">active</option>
+            <option value="disabled">disabled</option>
+          </select>
+        </label>
+        <button id="prod-save" class="primary">保存</button>
+        <button id="prod-reset">清空</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h3>商品列表</h3>
+        <button id="reload-products">刷新</button>
+      </div>
+      <div id="products-wrap"><div class="empty">请先连接</div></div>
+    </div>
+  </section>
+
+  <!-- 套餐 -->
+  <section id="panel-plans" class="hidden">
+    <div class="card">
+      <h3 id="plan-form-title">新增套餐</h3>
+      <div class="form-row">
+        <input id="plan-id" type="hidden">
+        <label>标识 <input id="plan-code" placeholder="pro" style="width:130px"></label>
+        <label>名称 <input id="plan-name" placeholder="专业版" style="width:160px"></label>
+        <label>设备数 <input id="plan-devices" type="number" min="1" max="100" value="1" style="width:90px"></label>
+        <label>有效天数 <input id="plan-days" type="number" min="1" max="3650" value="30" style="width:100px"></label>
+      </div>
+      <div class="form-row" style="align-items:flex-start;margin-top:10px">
+        <span style="font-size:11px;color:var(--muted);padding-top:6px">功能</span>
+        <div id="plan-features" class="check-grid"></div>
+      </div>
+      <div class="form-row" style="margin-top:10px">
+        <button id="plan-save" class="primary">保存</button>
+        <button id="plan-reset">清空</button>
+        <span class="hint">标识用于商品和卡密关联，创建后不能修改。</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h3>套餐列表</h3>
+        <button id="reload-plans">刷新</button>
+      </div>
+      <div id="plans-wrap"><div class="empty">请先连接</div></div>
+    </div>
+  </section>
+
+  <!-- 跳转卡 -->
+  <section id="panel-jump" class="hidden">
+    <div class="card">
+      <h3 id="jump-form-title">新增跳转卡</h3>
+      <div class="form-row">
+        <input id="jump-id" type="hidden">
+        <label>名称 <input id="jump-name" placeholder="创业咨询卡片" style="width:170px"></label>
+        <label>短链标识 <input id="jump-code" placeholder="留空自动生成" style="width:140px"></label>
+        <label>分组 <input id="jump-group" placeholder="默认" style="width:110px"></label>
+        <label>类型
+          <select id="jump-type">
+            <option value="url">普通链接</option>
+            <option value="wechat_qr">个人微信二维码</option>
+            <option value="wecom">企业微信</option>
+          </select>
+        </label>
+        <label>状态
+          <select id="jump-status">
+            <option value="active">启用</option>
+            <option value="disabled">停用</option>
+          </select>
+        </label>
+      </div>
+      <div class="form-row" id="jump-url-row">
+        <label style="flex:1">目标地址 * <input id="jump-url" placeholder="https://example.com/landing" style="width:100%"></label>
+      </div>
+      <div class="form-row" id="jump-qr-row" style="display:none">
+        <label style="flex:1">二维码图片 URL * <input id="jump-qr" placeholder="https://cdn.example.com/wechat-qr.png" style="width:100%"></label>
+        <button type="button" id="jump-qr-upload">上传图片</button>
+        <input id="jump-qr-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
+      </div>
+      <p class="hint" id="jump-qr-hint" style="display:none;margin:-4px 0 10px">
+        个人微信没有官方一键加好友链接。用户点卡片后会打开落地页，先保存二维码，再打开微信扫码。
+        可直接上传二维码图片（PNG/JPG/WebP/GIF，≤5MB）。
+      </p>
+      <div class="form-row" id="jump-wecom-row" style="display:none">
+        <label style="flex:1">企业微信联系我链接 * <input id="jump-wecom-url" placeholder="https://work.weixin.qq.com/ca/... 或 weixin://..." style="width:100%"></label>
+        <label style="flex:1">二维码图片 URL（可选） <input id="jump-wecom-qr" placeholder="https://.../wecom-qr.png" style="width:100%"></label>
+        <button type="button" id="jump-wecom-qr-upload">上传二维码</button>
+        <input id="jump-wecom-qr-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
+      </div>
+      <p class="hint" id="jump-wecom-hint" style="display:none;margin:-4px 0 10px">
+        企业微信官方「联系我」链接，支持 https://、weixin:// 或 wxwork://；二维码可选，作为兜底。
+      </p>
+      <div class="form-row">
+        <label>卡片标题 <input id="jump-title" placeholder="点我咨询" style="width:170px"></label>
+        <label>卡片描述 <input id="jump-desc" placeholder="标题下面的一行小字" style="width:240px"></label>
+        <label style="flex:1">封面图 URL <input id="jump-cover" placeholder="https://.../cover.png" style="width:100%"></label>
+        <button type="button" id="jump-cover-upload">上传封面</button>
+        <input id="jump-cover-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
+      </div>
+      <div class="form-row">
+        <button id="jump-save" class="primary">保存</button>
+        <button id="jump-reset">清空</button>
+        <span class="hint">短链由 PUBLIC_BASE_URL 拼出；目标地址可随时改，已发出的短链不变。</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h3>跳转卡列表</h3>
+        <button id="reload-jump">刷新</button>
+      </div>
+      <div id="jump-wrap"><div class="empty">请先连接</div></div>
+    </div>
+  </section>
+
+  <!-- 版本发布 -->
+  <section id="panel-release" class="hidden">
+    <div class="card">
+      <h3>上传安装包并发布</h3>
+      <div class="form-row">
+        <label>版本 <input id="rel-version" placeholder="0.2.0" style="width:110px"></label>
+        <label>最低版本 <input id="rel-min" placeholder="可选，如 0.1.0" style="width:140px"></label>
+        <label class="check"><input id="rel-force" type="checkbox"> 强制更新</label>
+        <label class="check"><input id="rel-publish" type="checkbox" checked> 上传后立即启用</label>
+      </div>
+      <div class="form-row">
+        <label style="flex:1">更新说明 <input id="rel-notes" placeholder="本次更新内容" style="width:100%"></label>
+      </div>
+      <div class="form-row">
+        <label>安装包 <input id="rel-file" type="file" accept=".exe,.msi,.zip"></label>
+        <button id="rel-upload" class="primary">上传并发布</button>
+        <span id="rel-progress" class="hint"></span>
+      </div>
+      <p class="hint">
+        上传后服务端会计算 SHA256。只有「已启用」的版本会出现在客户端版本清单里；
+        强制更新会让低于最低版本的客户端无法继续使用。
+      </p>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h3>版本列表</h3>
+        <button id="reload-releases">刷新</button>
+      </div>
+      <div id="releases-wrap"><div class="empty">请先连接</div></div>
+    </div>
+  </section>
+</main>
+
+<div id="toast"></div>
+<div id="modal" class="hidden">
+  <div class="modal-box">
+    <h3 id="modal-title"></h3>
+    <div id="modal-body" class="body"></div>
+    <div class="modal-actions"><button id="modal-close">关闭</button></div>
+  </div>
+</div>
+
+<script>
+const state = {
+  token: sessionStorage.getItem('licenseAdminToken') || '',
+  connected: false,
+  tab: 'keys',
+  jumpCards: [],
+  plans: [],
+  products: [],
+};
+
+const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+}[c]));
+
+function fmt(ts) {
+  if (!ts) return '-';
+  const d = new Date(Number(ts));
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+const yuan = (cents) => '¥' + (Number(cents || 0) / 100).toFixed(2);
+const FEATURE_LABELS = {
+  chat: '发消息', broadcast: '智能群发', intercept: '线索雷达', monitor: '持续监控',
+  autoreply: '自动回复', proxy: '代理 IP', export: '导出', account: '账号管理',
+  logs: '发送日志', sensitive: '敏感词',
+};
+let lastGenerated = null;
+
+function planLabel(value) {
+  if (!value) return '-';
+  const p = state.plans.find((x) => x.id === value || x.code === value);
+  return p ? `${p.name}（${p.code}）` : value;
+}
+const featureText = (f) => FEATURE_LABELS[f] || f;
+function downloadText(filename, text, mime = 'text/csv;charset=utf-8') {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+const KEY_STATUS = {
+  unused: ['未激活', 'info'],
+  active: ['已激活', 'ok'],
+  revoked: ['已作废', 'off'],
+};
+const ORDER_STATUS = {
+  created: ['待支付', 'info'],
+  paid: ['已支付', 'ok'],
+  refunded: ['已退款', 'warn'],
+  cancelled: ['已取消', ''],
+  closed: ['已关闭', ''],
+};
+const JUMP_STATUS = {
+  active: ['启用', 'ok'],
+  disabled: ['停用', 'off'],
+};
+
+let toastTimer = null;
+function toast(msg, isErr) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = 'show' + (isErr ? ' err' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 2600);
+}
+
+async function uploadImage(file) {
+  if (!file) throw new Error('请选择图片');
+  if (file.size > 5 * 1024 * 1024) throw new Error('图片不能超过 5MB');
+  const fd = new FormData();
+  fd.append('file', file);
+  const r = await fetch('/v1/admin/uploads', {
+    method: 'POST',
+    headers: { 'X-Admin-Token': state.token },
+    body: fd,
+  });
+  if (r.status === 401) {
+    sessionStorage.removeItem('licenseAdminToken');
+    location.replace('/login.html');
+    throw new Error('登录已失效，请重新输入令牌');
+  }
+  const text = await r.text();
+  let body;
+  try { body = text ? JSON.parse(text) : null; } catch { body = text; }
+  if (!r.ok) {
+    const msg = (body && (body.message || body.error)) || `HTTP ${r.status}`;
+    throw new Error(msg);
+  }
+  if (!body || !body.url) throw new Error('服务器未返回图片地址');
+  return body.url;
+}
+
+function wireImageUpload(buttonId, fileId, targetId) {
+  const btn = $(buttonId);
+  const fileInput = $(fileId);
+  if (!btn || !fileInput) return;
+  btn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files && fileInput.files[0];
+    fileInput.value = '';
+    if (!file) return;
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '上传中…';
+    try {
+      const url = await uploadImage(file);
+      $(targetId).value = url;
+      toast('图片已上传');
+    } catch (e) {
+      toast(e.message || '上传失败', true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  });
+}
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, {
+    ...opts,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Admin-Token': state.token,
+      ...(opts.headers || {}),
+    },
+  });
+  if (r.status === 401) {
+    sessionStorage.removeItem('licenseAdminToken');
+    location.replace('/login.html');
+    throw new Error('登录已失效，请重新输入令牌');
+  }
+  const text = await r.text();
+  let body;
+  try { body = text ? JSON.parse(text) : null; } catch { body = text; }
+  if (!r.ok) {
+    const msg = (body && (body.message || body.error)) || `HTTP ${r.status}`;
+    const err = new Error(msg);
+    err.code = body && body.code;
+    throw err;
+  }
+  return body;
+}
+
+async function connect() {
+  state.token = sessionStorage.getItem('licenseAdminToken') || '';
+  if (!state.token) { location.replace('/login.html'); return; }
+  try {
+    await api('/v1/admin/products');
+    state.connected = true;
+    $('status').className = 'dot on';
+    $('status').title = '已连接';
+    $('conn-label').textContent = '已连接';
+    loadAll();
+  } catch (e) {
+    state.connected = false;
+    $('status').className = 'dot';
+    $('conn-label').textContent = '连接失败';
+    toast(e.message || '连接失败', true);
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('licenseAdminToken');
+  state.token = '';
+  location.replace('/login.html');
+}
+
+async function loadAll() {
+  if (!state.connected) return;
+  // 套餐用于生成卡密/商品的下拉，也用于卡密列表显示套餐名
+  await loadPlans();
+  if (state.tab === 'keys') loadKeys();
+  if (state.tab === 'orders') loadOrders();
+  if (state.tab === 'products') loadProducts();
+  if (state.tab === 'jump') loadJumpCards();
+  if (state.tab === 'release') loadReleases();
+}
+
+// ── 卡密 ──
+async function loadKeys() {
+  const wrap = $('keys-wrap');
+  const batch = $('batch-filter').value.trim();
+  try {
+    const list = await api('/v1/admin/keys' + (batch ? '?batch=' + encodeURIComponent(batch) : ''));
+    if (!list.length) { wrap.innerHTML = '<div class="empty">没有卡密</div>'; return; }
+    wrap.innerHTML = `<table><thead><tr>
+        <th>批次</th><th>套餐</th><th>状态</th><th>有效期</th><th>设备</th><th>激活时间</th><th style="width:190px">操作</th>
+      </tr></thead><tbody>`;
+    let rows = '';
+    for (const k of list) {
+      const st = KEY_STATUS[k.status] || [k.status, ''];
+      rows += `<tr>
+        <td class="mono">${esc(k.batch || '-')}</td>
+        <td>${esc(planLabel(k.planId))}</td>
+        <td><span class="tag ${st[1]}">${esc(st[0])}</span></td>
+        <td>${k.expireAt ? fmt(k.expireAt) : (k.durationDays ? k.durationDays + ' 天' : '套餐默认')}</td>
+        <td>${k.activeDevices}/${k.deviceLimit}</td>
+        <td>${fmt(k.activatedAt)}</td>
+        <td>
+          <button class="mini" onclick="showKeyDetail('${esc(k.id)}')">详情</button>
+          <button class="mini" onclick="extendKey('${esc(k.id)}')">延期</button>
+          <button class="mini danger" onclick="revokeKey('${esc(k.id)}')">作废</button>
+        </td>
+      </tr>`;
+    }
+    wrap.querySelector('tbody').innerHTML = rows;
+  } catch (e) {
+    wrap.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function generateKeys() {
+  const plan = $('gen-plan').value;
+  if (!plan) { toast('请先选择套餐', true); return; }
+  const count = Number($('gen-count').value) || 1;
+  const days = Number($('gen-days').value) || undefined;
+  const batch = $('gen-batch').value.trim() || undefined;
+  try {
+    const res = await api('/v1/admin/keys/generate', {
+      method: 'POST',
+      body: JSON.stringify({ plan, count, durationDays: days, batch }),
+    });
+    lastGenerated = { batch: res.batch, keys: res.keys };
+    const text = res.keys.map((k) => k.key).join('\n');
+    const box = $('gen-result');
+    box.classList.remove('hidden');
+    box.innerHTML = `<div>批次 ${esc(res.batch)} · ${res.count} 张 · 仅显示这一次</div>
+      <textarea id="gen-text" style="width:100%;height:140px;margin-top:8px;background:transparent;color:#e2e8f0;border:1px solid #334155;border-radius:4px;padding:8px;font-family:inherit" readonly>${esc(text)}</textarea>
+      <div style="margin-top:8px"><button id="gen-csv" class="mini">下载明文 CSV</button></div>`;
+    $('gen-csv').addEventListener('click', downloadGeneratedCsv);
+    try { await navigator.clipboard.writeText(text); toast('已生成并复制到剪贴板'); }
+    catch { toast('已生成'); }
+    loadKeys();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+function downloadGeneratedCsv() {
+  if (!lastGenerated?.keys?.length) { toast('没有可下载的卡密', true); return; }
+  const rows = ['id,batch,key'];
+  for (const k of lastGenerated.keys) {
+    rows.push(`"${String(k.id).replace(/"/g, '""')}","${String(lastGenerated.batch).replace(/"/g, '""')}","${String(k.key).replace(/"/g, '""')}"`);
+  }
+  const safe = String(lastGenerated.batch).replace(/[^A-Za-z0-9_-]/g, '_');
+  downloadText(`keys-${safe}-plain.csv`, '\uFEFF' + rows.join('\r\n'));
+  toast('已下载明文 CSV');
+}
+
+async function revokeKey(id) {
+  if (!confirm('确定作废这张卡密？已绑定的设备会立即失效。')) return;
+  try { await api('/v1/admin/keys/' + id + '/revoke', { method: 'POST' }); toast('已作废'); loadKeys(); }
+  catch (e) { toast(e.message, true); }
+}
+
+async function extendKey(id) {
+  const days = Number(prompt('延长多少天？', '30'));
+  if (!days || days <= 0) return;
+  try { await api('/v1/admin/keys/' + id + '/extend', { method: 'POST', body: JSON.stringify({ days }) }); toast('已延期 ' + days + ' 天'); loadKeys(); }
+  catch (e) { toast(e.message, true); }
+}
+
+function currentBatch() {
+  const batch = $('batch-filter').value.trim();
+  if (!batch) toast('请先在批次框填写批次号', true);
+  return batch;
+}
+
+async function exportBatch() {
+  const batch = currentBatch();
+  if (!batch) return;
+  try {
+    const csv = await api('/v1/admin/keys/export?batch=' + encodeURIComponent(batch));
+    const safe = batch.replace(/[^A-Za-z0-9_-]/g, '_');
+    downloadText(`keys-${safe}.csv`, typeof csv === 'string' ? csv : String(csv ?? ''));
+    toast('已导出批次元数据');
+  } catch (e) { toast(e.message, true); }
+}
+
+async function batchExtend() {
+  const batch = currentBatch();
+  if (!batch) return;
+  const days = Number(prompt(`批「${batch}」全部卡密延长多少天？`, '30'));
+  if (!days || days <= 0) return;
+  if (!confirm(`确定把批次「${batch}」的所有卡密延长 ${days} 天？`)) return;
+  try {
+    const r = await api('/v1/admin/keys/batch-extend', {
+      method: 'POST',
+      body: JSON.stringify({ batch, days }),
+    });
+    toast(`已延期 ${r.count} 张`);
+    loadKeys();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function batchRevoke() {
+  const batch = currentBatch();
+  if (!batch) return;
+  if (!confirm(`确定作废批次「${batch}」的全部卡密？\n已激活的设备会立即失效，且不可恢复。`)) return;
+  try {
+    const r = await api('/v1/admin/keys/batch-revoke', {
+      method: 'POST',
+      body: JSON.stringify({ batch }),
+    });
+    toast(`已作废 ${r.count} 张`);
+    loadKeys();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function showKeyDetail(id) {
+  try {
+    const d = await api('/v1/admin/keys/' + id);
+    const acts = d.activations || [];
+    const rows = acts.length
+      ? acts.map((a) => `<tr>
+          <td class="mono">${esc(a.device)}</td>
+          <td>${fmt(a.activatedAt)}</td>
+          <td>${fmt(a.lastSeenAt)}</td>
+          <td>${a.active ? '<span class="tag ok">在线</span>' : '<span class="tag off">已解绑</span>'}</td>
+          <td>${a.active ? `<button class="mini danger" onclick="unbind('${esc(a.id)}')">解绑</button>` : ''}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="5" style="color:#9aa0a6">还没有设备激活</td></tr>';
+    $('modal-title').textContent = '卡密详情';
+    $('modal-body').innerHTML = `
+      <div>状态：${esc((KEY_STATUS[d.status] || [d.status])[0])} · 套餐：${esc(planLabel(d.planId))}
+        · 到期：${d.expireAt ? fmt(d.expireAt) : '未激活'}</div>
+      <div style="margin:10px 0 6px">设备（${d.activeDevices}/${d.deviceLimit}）</div>
+      <table><thead><tr><th>设备指纹</th><th>激活时间</th><th>最近心跳</th><th>状态</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+    $('modal').classList.remove('hidden');
+  } catch (e) { toast(e.message, true); }
+}
+
+async function unbind(activationId) {
+  if (!confirm('解绑这台设备？')) return;
+  try { await api('/v1/admin/activations/' + activationId + '/revoke', { method: 'POST' }); toast('已解绑'); $('modal').classList.add('hidden'); loadKeys(); }
+  catch (e) { toast(e.message, true); }
+}
+
+// ── 订单 ──
+async function loadOrders() {
+  const wrap = $('orders-wrap');
+  const status = $('order-status').value;
+  try {
+    const list = await api('/v1/admin/orders' + (status ? '?status=' + encodeURIComponent(status) : ''));
+    if (!list.length) { wrap.innerHTML = '<div class="empty">没有订单</div>'; return; }
+    wrap.innerHTML = `<table><thead><tr>
+        <th>订单号</th><th>商品</th><th>金额</th><th>渠道</th><th>状态</th><th>卡密</th><th>创建时间</th><th style="width:250px">操作</th>
+      </tr></thead><tbody>`;
+    let rows = '';
+    for (const o of list) {
+      const st = ORDER_STATUS[o.status] || [o.status, ''];
+      const ops = [];
+      if (o.status === 'created') {
+        ops.push(`<button class="mini" onclick="markPaid('${esc(o.outTradeNo)}')">标记已支付</button>`);
+        ops.push(`<button class="mini" onclick="cancelOrder('${esc(o.outTradeNo)}')">取消</button>`);
+      }
+      if (o.status === 'paid') {
+        ops.push(`<button class="mini" onclick="revealKey('${esc(o.outTradeNo)}')">取卡密</button>`);
+        ops.push(`<button class="mini danger" onclick="refundOrder('${esc(o.outTradeNo)}')">退款</button>`);
+      }
+      rows += `<tr>
+        <td class="mono">${esc(o.outTradeNo)}</td>
+        <td>${esc(o.productName || '-')}</td>
+        <td>${yuan(o.amountCents)}</td>
+        <td>${esc(o.channel)}</td>
+        <td><span class="tag ${st[1]}">${esc(st[0])}</span></td>
+        <td class="mono">${esc(o.keyMasked || '-')}</td>
+        <td>${fmt(o.createdAt)}</td>
+        <td>${ops.join('')}</td>
+      </tr>`;
+    }
+    wrap.querySelector('tbody').innerHTML = rows;
+  } catch (e) {
+    wrap.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function markPaid(no) {
+  if (!confirm('确认已收到款并给这个订单发卡？')) return;
+  try { await api('/v1/admin/orders/' + no + '/mark-paid', { method: 'POST' }); toast('已发卡'); loadOrders(); }
+  catch (e) { toast(e.message, true); }
+}
+async function cancelOrder(no) {
+  if (!confirm('取消这个未支付订单？')) return;
+  try { await api('/v1/admin/orders/' + no + '/cancel', { method: 'POST' }); toast('已取消'); loadOrders(); }
+  catch (e) { toast(e.message, true); }
+}
+async function refundOrder(no) {
+  if (!confirm('标记退款？未激活的卡密会被自动作废。')) return;
+  try {
+    const r = await api('/v1/admin/orders/' + no + '/refund', { method: 'POST' });
+    toast(r.message || '已退款');
+    loadOrders();
+  } catch (e) { toast(e.message, true); }
+}
+async function revealKey(no) {
+  try {
+    const r = await api('/v1/admin/orders/' + no + '/key');
+    $('modal-title').textContent = '订单卡密';
+    $('modal-body').innerHTML = `<div class="mono" style="font-size:15px">${esc(r.key)}</div>
+      <p class="hint">仅用于客服找回，请确认对方身份后再发送。</p>`;
+    $('modal').classList.remove('hidden');
+  } catch (e) { toast(e.message, true); }
+}
+
+// ── 商品 ──
+async function loadProducts() {
+  const wrap = $('products-wrap');
+  try {
+    const list = await api('/v1/admin/products');
+    state.products = list;
+    if (!list.length) { wrap.innerHTML = '<div class="empty">没有商品</div>'; return; }
+    wrap.innerHTML = `<table><thead><tr>
+        <th>编码</th><th>名称</th><th>套餐</th><th>价格</th><th>天数</th><th>设备</th><th>状态</th><th>操作</th>
+      </tr></thead><tbody>`;
+    let rows = '';
+    for (const p of list) {
+      rows += `<tr>
+        <td class="mono">${esc(p.code)}</td>
+        <td>${esc(p.name)}</td>
+        <td>${esc(planLabel(p.planCode))}</td>
+        <td>${yuan(p.priceCents)}</td>
+        <td>${p.durationDays ?? '套餐默认'}</td>
+        <td>${p.deviceLimit}</td>
+        <td><span class="tag ${p.status === 'active' ? 'ok' : 'off'}">${esc(p.status)}</span></td>
+        <td><button class="mini" onclick="editProductById('${esc(p.id)}')">编辑</button></td>
+      </tr>`;
+    }
+    wrap.querySelector('tbody').innerHTML = rows;
+  } catch (e) {
+    wrap.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+function editProductById(id) {
+  const p = state.products.find((x) => x.id === id);
+  if (p) editProduct(p);
+}
+
+function editProduct(p) {  $('prod-form-title').textContent = '编辑商品';
+  $('prod-id').value = p.id;
+  $('prod-code').value = p.code;
+  $('prod-name').value = p.name;
+  $('prod-plan').value = p.planCode;
+  $('prod-price').value = (p.priceCents / 100).toFixed(2);
+  $('prod-days').value = p.durationDays ?? '';
+  $('prod-status').value = p.status;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetProductForm() {
+  $('prod-form-title').textContent = '新增商品';
+  $('prod-id').value = '';
+  $('prod-code').value = '';
+  $('prod-name').value = '';
+  $('prod-price').value = '';
+  $('prod-days').value = '';
+  $('prod-status').value = 'active';
+}
+
+async function saveProduct() {
+  const id = $('prod-id').value;
+  const price = Number($('prod-price').value);
+  if (!price || price <= 0) { toast('价格必须大于 0', true); return; }
+  const payload = {
+    code: $('prod-code').value.trim(),
+    name: $('prod-name').value.trim(),
+    planCode: $('prod-plan').value,
+    priceCents: Math.round(price * 100),
+    durationDays: Number($('prod-days').value) || null,
+    status: $('prod-status').value,
+  };
+  if (!payload.code || !payload.name) { toast('编码和名称不能为空', true); return; }
+  try {
+    await api('/v1/admin/products' + (id ? '/' + id : ''), {
+      method: id ? 'PUT' : 'POST',
+      body: JSON.stringify(payload),
+    });
+    toast('已保存');
+    resetProductForm();
+    loadProducts();
+  } catch (e) { toast(e.message, true); }
+}
+
+// ── 套餐 ──
+function renderPlanFeatureInputs(selected = []) {
+  const box = $('plan-features');
+  const set = new Set(selected);
+  box.innerHTML = Object.entries(FEATURE_LABELS).map(([key, label]) =>
+    `<label><input type="checkbox" class="plan-feature" value="${esc(key)}"${set.has(key) ? ' checked' : ''}> ${esc(label)}</label>`,
+  ).join('');
+}
+
+function selectedPlanFeatures() {
+  return [...document.querySelectorAll('.plan-feature:checked')].map((x) => x.value);
+}
+
+function fillPlanSelects() {
+  const opts = state.plans.map((p) => `<option value="${esc(p.code)}">${esc(p.name)}（${esc(p.code)}）</option>`).join('');
+  for (const id of ['gen-plan', 'prod-plan']) {
+    const sel = $(id);
+    const prev = sel.value;
+    sel.innerHTML = opts || '<option value="">无可用套餐</option>';
+    const codes = state.plans.map((p) => p.code);
+    if (codes.includes(prev)) sel.value = prev;
+    else if (codes.includes('pro')) sel.value = 'pro';
+    else if (codes[0]) sel.value = codes[0];
+  }
+}
+
+async function loadPlans() {
+  try {
+    state.plans = await api('/v1/admin/plans');
+    fillPlanSelects();
+    renderPlans();
+  } catch (e) {
+    $('plans-wrap').innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+function renderPlans() {
+  const wrap = $('plans-wrap');
+  if (!state.plans.length) {
+    wrap.innerHTML = '<div class="empty">还没有套餐，请先新增</div>';
+    return;
+  }
+  wrap.innerHTML = `<table><thead><tr>
+      <th>名称</th><th>标识</th><th>功能</th><th>设备数</th><th>有效天数</th><th style="width:100px">操作</th>
+    </tr></thead><tbody>`;
+  let rows = '';
+  for (const p of state.plans) {
+    const feats = (p.features || []).map(featureText).join('、') || '-';
+    rows += `<tr>
+      <td>${esc(p.name)}</td>
+      <td class="mono">${esc(p.code)}</td>
+      <td title="${esc(feats)}" style="max-width:420px">${esc(feats)}</td>
+      <td>${p.deviceLimit}</td>
+      <td>${p.durationDays}</td>
+      <td><button class="mini" onclick="editPlanById('${esc(p.id)}')">编辑</button></td>
+    </tr>`;
+  }
+  wrap.querySelector('tbody').innerHTML = rows;
+}
+
+function editPlanById(id) {
+  const p = state.plans.find((x) => x.id === id);
+  if (p) editPlan(p);
+}
+
+function editPlan(p) {
+  $('plan-form-title').textContent = '编辑套餐';
+  $('plan-id').value = p.id;
+  $('plan-code').value = p.code;
+  $('plan-code').disabled = true;
+  $('plan-name').value = p.name;
+  $('plan-devices').value = p.deviceLimit;
+  $('plan-days').value = p.durationDays;
+  renderPlanFeatureInputs(p.features || []);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetPlanForm() {
+  $('plan-form-title').textContent = '新增套餐';
+  $('plan-id').value = '';
+  $('plan-code').value = '';
+  $('plan-code').disabled = false;
+  $('plan-name').value = '';
+  $('plan-devices').value = 1;
+  $('plan-days').value = 30;
+  renderPlanFeatureInputs(['chat', 'broadcast', 'intercept', 'monitor', 'autoreply']);
+}
+
+async function savePlan() {
+  const id = $('plan-id').value;
+  const payload = {
+    code: $('plan-code').value.trim().toLowerCase(),
+    name: $('plan-name').value.trim(),
+    features: selectedPlanFeatures(),
+    deviceLimit: Number($('plan-devices').value) || 0,
+    durationDays: Number($('plan-days').value) || 0,
+  };
+  if (!/^[a-z0-9_-]{2,32}$/.test(payload.code)) {
+    toast('标识只能用小写字母、数字、_、-，长度 2-32', true);
+    return;
+  }
+  if (!payload.name) { toast('请填写套餐名称', true); return; }
+  if (!payload.features.length) { toast('至少选择一个功能', true); return; }
+  if (payload.deviceLimit < 1 || payload.durationDays < 1) {
+    toast('设备数和有效天数必须大于 0', true);
+    return;
+  }
+  try {
+    await api('/v1/admin/plans' + (id ? '/' + id : ''), {
+      method: id ? 'PUT' : 'POST',
+      body: JSON.stringify(payload),
+    });
+    toast('套餐已保存');
+    resetPlanForm();
+    loadPlans();
+  } catch (e) { toast(e.message, true); }
+}
+
+// ── 跳转卡 ──
+async function loadJumpCards() {
+  const wrap = $('jump-wrap');
+  try {
+    const list = await api('/v1/admin/jump-cards');
+    state.jumpCards = list;
+    if (!list.length) { wrap.innerHTML = '<div class="empty">还没有跳转卡</div>'; return; }
+    wrap.innerHTML = `<table><thead><tr>
+        <th>名称</th><th>短链</th><th>类型</th><th>目标 / 二维码</th><th>分组</th><th>状态</th><th>点击</th><th>最近点击</th><th style="width:200px">操作</th>
+      </tr></thead><tbody>`;
+    let rows = '';
+    for (const c of list) {
+      const st = JUMP_STATUS[c.status] || [c.status, ''];
+      const type = c.targetType === 'wechat_qr'
+        ? '微信二维码'
+        : (c.targetType === 'wecom' ? '企业微信' : '普通链接');
+      const target = c.targetType === 'wechat_qr'
+        ? (c.qrImageUrl || '-')
+        : (c.targetUrl || '-');
+      rows += `<tr>
+        <td>${esc(c.name)}${c.title ? `<div class="hint">${esc(c.title)}</div>` : ''}</td>
+        <td class="mono">${esc(c.shortUrl)}<br><button class="mini" onclick="copyJump('${esc(c.shortUrl)}')">复制</button></td>
+        <td>${type}</td>
+        <td class="mono" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(target)}">${esc(target)}</td>
+        <td>${esc(c.groupName || '-')}</td>
+        <td><span class="tag ${st[1]}">${esc(st[0])}</span></td>
+        <td>${c.clickCount}</td>
+        <td>${fmt(c.lastClickAt)}</td>
+        <td>
+          <button class="mini" onclick="showJumpDetail('${esc(c.id)}')">详情</button>
+          <button class="mini" onclick="editJump('${esc(c.id)}')">编辑</button>
+          <button class="mini danger" onclick="deleteJump('${esc(c.id)}')">删除</button>
+        </td>
+      </tr>`;
+    }
+    wrap.querySelector('tbody').innerHTML = rows;
+  } catch (e) {
+    wrap.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+function editJump(id) {
+  const c = state.jumpCards.find((x) => x.id === id);
+  if (!c) return;
+  $('jump-form-title').textContent = '编辑跳转卡';
+  $('jump-id').value = c.id;
+  $('jump-name').value = c.name || '';
+  $('jump-code').value = c.code || '';
+  $('jump-group').value = c.groupName || '';
+  $('jump-type').value = c.targetType || 'url';
+  $('jump-status').value = c.status;
+  $('jump-url').value = c.targetUrl || '';
+  $('jump-qr').value = c.targetType === 'wechat_qr' ? (c.qrImageUrl || '') : '';
+  $('jump-wecom-url').value = c.targetType === 'wecom' ? (c.targetUrl || '') : '';
+  $('jump-wecom-qr').value = c.targetType === 'wecom' ? (c.qrImageUrl || '') : '';
+  $('jump-title').value = c.title || '';
+  $('jump-desc').value = c.description || '';
+  $('jump-cover').value = c.coverUrl || '';
+  toggleJumpType();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleJumpType() {
+  const type = $('jump-type').value;
+  const qr = type === 'wechat_qr';
+  const wecom = type === 'wecom';
+  $('jump-url-row').style.display = (type === 'url') ? '' : 'none';
+  $('jump-qr-row').style.display = qr ? '' : 'none';
+  $('jump-qr-hint').style.display = qr ? '' : 'none';
+  $('jump-wecom-row').style.display = wecom ? '' : 'none';
+  $('jump-wecom-hint').style.display = wecom ? '' : 'none';
+}
+
+function resetJumpForm() {
+  $('jump-form-title').textContent = '新增跳转卡';
+  $('jump-id').value = '';
+  $('jump-name').value = '';
+  $('jump-code').value = '';
+  $('jump-group').value = '';
+  $('jump-type').value = 'url';
+  $('jump-status').value = 'active';
+  $('jump-url').value = '';
+  $('jump-qr').value = '';
+  $('jump-wecom-url').value = '';
+  $('jump-wecom-qr').value = '';
+  $('jump-title').value = '';
+  $('jump-desc').value = '';
+  $('jump-cover').value = '';
+  toggleJumpType();
+}
+
+async function saveJump() {
+  const id = $('jump-id').value;
+  const targetType = $('jump-type').value;
+  const payload = {
+    code: $('jump-code').value.trim() || null,
+    name: $('jump-name').value.trim(),
+    targetType,
+    targetUrl: targetType === 'url'
+      ? $('jump-url').value.trim()
+      : (targetType === 'wecom' ? $('jump-wecom-url').value.trim() : ''),
+    qrImageUrl: targetType === 'wechat_qr'
+      ? $('jump-qr').value.trim()
+      : (targetType === 'wecom' ? ($('jump-wecom-qr').value.trim() || null) : null),
+    title: $('jump-title').value.trim() || null,
+    description: $('jump-desc').value.trim() || null,
+    coverUrl: $('jump-cover').value.trim() || null,
+    groupName: $('jump-group').value.trim() || null,
+    status: $('jump-status').value,
+  };
+  if (!payload.name) { toast('名称不能为空', true); return; }
+  if (targetType === 'wechat_qr' && !payload.qrImageUrl) {
+    toast('请填写二维码图片 URL', true); return;
+  }
+  if (targetType === 'url' && !payload.targetUrl) {
+    toast('请填写目标地址', true); return;
+  }
+  if (targetType === 'wecom' && !payload.targetUrl) {
+    toast('请填写企业微信联系我链接', true); return;
+  }
+  try {
+    await api('/v1/admin/jump-cards' + (id ? '/' + id : ''), {
+      method: id ? 'PUT' : 'POST',
+      body: JSON.stringify(payload),
+    });
+    toast(id ? '已保存' : '已创建');
+    resetJumpForm();
+    loadJumpCards();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function deleteJump(id) {
+  if (!confirm('删除这张跳转卡？短链会立即失效，点击记录也会删除。')) return;
+  try {
+    await api('/v1/admin/jump-cards/' + id, { method: 'DELETE' });
+    toast('已删除');
+    loadJumpCards();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function copyJump(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('短链已复制');
+  } catch {
+    prompt('复制下面这条短链', text);
+  }
+}
+
+async function showJumpDetail(id) {
+  try {
+    const d = await api('/v1/admin/jump-cards/' + id);
+    const c = d.card;
+    const rows = (d.recentClicks || []).length
+      ? d.recentClicks.map((k) => `<tr>
+          <td>${fmt(k.clickedAt)}</td>
+          <td class="mono">${esc(k.ip || '-')}</td>
+          <td title="${esc(k.userAgent || '')}" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(k.userAgent || '-')}</td>
+          <td title="${esc(k.referer || '')}" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(k.referer || '-')}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="4" style="color:#9aa0a6">还没有点击</td></tr>';
+    $('modal-title').textContent = c.name;
+    const typeLabel = c.targetType === 'wechat_qr' ? '个人微信二维码' : '普通链接';
+    const targetLabel = c.targetType === 'wechat_qr' ? '二维码图片' : '目标地址';
+    const targetValue = c.targetType === 'wechat_qr' ? (c.qrImageUrl || '-') : (c.targetUrl || '-');
+    $('modal-body').innerHTML = `
+      <div>短链：<span class="mono">${esc(c.shortUrl)}</span></div>
+      <div style="margin-top:6px">类型：${esc(typeLabel)}</div>
+      <div style="margin-top:6px">${esc(targetLabel)}：<span class="mono">${esc(targetValue)}</span></div>
+      <div style="margin-top:6px">状态：${esc((JUMP_STATUS[c.status] || [c.status])[0])} · 分组：${esc(c.groupName || '-')}
+        · 累计点击：${d.totalClicks} · 最近点击：${fmt(c.lastClickAt)}</div>
+      <div style="margin:12px 0 6px">最近 100 次点击</div>
+      <table><thead><tr><th>时间</th><th>IP</th><th>User-Agent</th><th>来源</th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+    $('modal').classList.remove('hidden');
+  } catch (e) { toast(e.message, true); }
+}
+
+// ── 版本发布 ──
+const fmtBytes = (n) => {
+  const v = Number(n || 0);
+  if (v >= 1024 * 1024) return (v / 1024 / 1024).toFixed(1) + ' MB';
+  if (v >= 1024) return (v / 1024).toFixed(1) + ' KB';
+  return v + ' B';
+};
+
+async function loadReleases() {
+  const wrap = $('releases-wrap');
+  try {
+    const list = await api('/v1/admin/app/releases');
+    if (!list.length) {
+      wrap.innerHTML = '<div class="empty">还没有发布过版本</div>';
+      return;
+    }
+    wrap.innerHTML = `<table><thead><tr>
+        <th>版本</th><th>最低版本</th><th>强制</th><th>文件</th><th>大小</th>
+        <th>SHA256</th><th>状态</th><th>发布时间</th><th style="width:230px">操作</th>
+      </tr></thead><tbody>`;
+    let rows = '';
+    for (const r of list) {
+      rows += `<tr>
+        <td class="mono">${esc(r.version)}</td>
+        <td class="mono">${esc(r.minVersion || '-')}</td>
+        <td>${r.forceUpdate ? '是' : '-'}</td>
+        <td title="${esc(r.fileName)}" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.fileName)}</td>
+        <td>${fmtBytes(r.fileSize)}</td>
+        <td class="mono" title="${esc(r.sha256)}">${esc(String(r.sha256 || '').slice(0, 12))}…</td>
+        <td>${r.active ? '<span class="tag ok">已启用</span>' : '<span class="tag">未启用</span>'}</td>
+        <td>${fmt(r.publishedAt || r.createdAt)}</td>
+        <td>
+          ${r.active
+            ? `<button class="mini" onclick="unpublishRelease('${esc(r.id)}')">停用</button>`
+            : `<button class="mini" onclick="publishRelease('${esc(r.id)}')">启用</button>`}
+          <button class="mini" onclick="copyReleaseUrl('${esc(r.downloadUrl)}')">复制下载链接</button>
+          ${r.active ? '' : `<button class="mini danger" onclick="deleteRelease('${esc(r.id)}')">删除</button>`}
+        </td>
+      </tr>`;
+    }
+    wrap.querySelector('tbody').innerHTML = rows;
+  } catch (e) {
+    wrap.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function uploadRelease() {
+  const file = $('rel-file').files[0];
+  const version = $('rel-version').value.trim();
+  if (!file) { toast('请选择安装包', true); return; }
+  if (!version) { toast('请填写版本号', true); return; }
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('version', version);
+  const min = $('rel-min').value.trim();
+  if (min) fd.append('minVersion', min);
+  fd.append('force', $('rel-force').checked ? 'true' : 'false');
+  fd.append('publish', $('rel-publish').checked ? 'true' : 'false');
+  fd.append('notes', $('rel-notes').value.trim());
+  fd.append('platform', 'win');
+  fd.append('channel', 'stable');
+
+  const progress = $('rel-progress');
+  progress.textContent = '上传中…';
+  try {
+    const res = await fetch('/v1/admin/app/releases', {
+      method: 'POST',
+      headers: { 'X-Admin-Token': state.token },
+      body: fd,
+    });
+    const text = await res.text();
+    let body = null;
+    try { body = text ? JSON.parse(text) : null; } catch { body = text; }
+    if (!res.ok) {
+      throw new Error((body && (body.message || body.error)) || `HTTP ${res.status}`);
+    }
+    progress.textContent = '已上传';
+    toast(body.active ? '安装包已上传并发布' : '安装包已上传，等待启用');
+    $('rel-file').value = '';
+    $('rel-version').value = '';
+    $('rel-min').value = '';
+    $('rel-notes').value = '';
+    $('rel-force').checked = false;
+    loadReleases();
+  } catch (e) {
+    progress.textContent = '';
+    toast(e.message, true);
+  }
+}
+
+async function publishRelease(id) {
+  try {
+    await api('/v1/admin/app/releases/' + id + '/publish', { method: 'POST' });
+    toast('版本已启用');
+    loadReleases();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function unpublishRelease(id) {
+  if (!confirm('停用这个版本后，客户端将不再收到更新；确定？')) return;
+  try {
+    await api('/v1/admin/app/releases/' + id + '/unpublish', { method: 'POST' });
+    toast('版本已停用');
+    loadReleases();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function deleteRelease(id) {
+  if (!confirm('删除这个未启用版本？安装包文件也会删除。')) return;
+  try {
+    await api('/v1/admin/app/releases/' + id, { method: 'DELETE' });
+    toast('版本已删除');
+    loadReleases();
+  } catch (e) { toast(e.message, true); }
+}
+
+async function copyReleaseUrl(url) {
+  try {
+    await navigator.clipboard.writeText(url);
+    toast('下载链接已复制');
+  } catch {
+    prompt('复制下面这条下载链接', url);
+  }
+}
+
+// ── 初始化 ──
+function switchTab(tab) {
+  state.tab = tab;
+  document.querySelectorAll('nav button').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+  ['keys', 'orders', 'products', 'plans', 'jump', 'release'].forEach((t) => {
+    $('panel-' + t).classList.toggle('hidden', t !== tab);
+  });
+  loadAll();
+}
+
+document.querySelectorAll('nav button').forEach((b) => {
+  b.addEventListener('click', () => switchTab(b.dataset.tab));
+});
+$('logout').addEventListener('click', logout);
+$('gen-btn').addEventListener('click', generateKeys);
+$('reload-keys').addEventListener('click', loadKeys);
+$('batch-filter').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadKeys(); });
+$('batch-export').addEventListener('click', exportBatch);
+$('batch-extend').addEventListener('click', batchExtend);
+$('batch-revoke').addEventListener('click', batchRevoke);
+$('reload-orders').addEventListener('click', loadOrders);
+$('order-status').addEventListener('change', loadOrders);
+$('reload-products').addEventListener('click', loadProducts);
+$('prod-save').addEventListener('click', saveProduct);
+$('prod-reset').addEventListener('click', resetProductForm);
+$('reload-plans').addEventListener('click', loadPlans);
+$('plan-save').addEventListener('click', savePlan);
+$('plan-reset').addEventListener('click', resetPlanForm);
+$('reload-jump').addEventListener('click', loadJumpCards);
+$('reload-releases').addEventListener('click', loadReleases);
+$('rel-upload').addEventListener('click', uploadRelease);
+$('jump-save').addEventListener('click', saveJump);
+$('jump-reset').addEventListener('click', resetJumpForm);
+$('jump-type').addEventListener('change', toggleJumpType);
+wireImageUpload('jump-qr-upload', 'jump-qr-file', 'jump-qr');
+wireImageUpload('jump-wecom-qr-upload', 'jump-wecom-qr-file', 'jump-wecom-qr');
+wireImageUpload('jump-cover-upload', 'jump-cover-file', 'jump-cover');
+$('modal-close').addEventListener('click', () => $('modal').classList.add('hidden'));
+$('modal').addEventListener('click', (e) => { if (e.target === $('modal')) $('modal').classList.add('hidden'); });
+
+renderPlanFeatureInputs(['chat', 'broadcast', 'intercept', 'monitor', 'autoreply']);
+
+if (state.token) {
+  connect();
+} else {
+  location.replace('/login.html');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+server:
+  port: ${PORT:8089}
+  shutdown: graceful
+
+spring:
+  application:
+    name: license-server
+
+  datasource:
+    # 统一使用 MySQL 8；同一个实例里用独立库 zmtjl_license
+    # 生产环境通过 DB_URL / DB_USER / DB_PASSWORD 覆盖
+    url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/zmtjl_license?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false&rewriteBatchedStatements=true}
+    username: ${DB_USER:zmtjl}
+    password: ${DB_PASSWORD:}
+    driver-class-name: ${DB_DRIVER:com.mysql.cj.jdbc.Driver}
+    hikari:
+      maximum-pool-size: ${DB_POOL:10}
+      minimum-idle: ${DB_MIN_IDLE:2}
+      connection-timeout: 10000
+      validation-timeout: 3000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+
+  flyway:
+    enabled: true
+    # 不允许自动 baseline 掩盖 schema 漂移；已有库必须带 flyway_schema_history
+    baseline-on-migrate: false
+    validate-on-migrate: true
+    out-of-order: false
+    # 生产禁止 flyway clean，避免误删数据
+    clean-disabled: true
+
+  jackson:
+    default-property-inclusion: non_null
+
+  servlet:
+    multipart:
+      max-file-size: ${UPDATE_MAX_FILE_MB:300}MB
+      max-request-size: ${UPDATE_MAX_FILE_MB:300}MB
+
+app:
+  admin-token: ${ADMIN_TOKEN:}
+  # 单 IP 5 分钟内管理令牌失败次数上限
+  admin-auth-fail-limit: ${ADMIN_AUTH_FAIL_LIMIT:20}
+  key-hmac-secret: ${KEY_HMAC_SECRET:}
+  token-ttl-hours: ${TOKEN_TTL_HOURS:720}
+  keys-dir: ${KEYS_DIR:./data/keys}
+  activate-rate-limit-per-minute: ${ACTIVATE_RATE_LIMIT:10}
+  # 对外地址：用于拼接支付回调/收银台
+  public-base-url: ${PUBLIC_BASE_URL:http://localhost:8080}
+  # 启用哪些支付渠道（逗号分隔）。生产只写实际接入的：manual,wechat,alipay,zpay...
+  pay-channels: ${PAY_CHANNELS:manual}
+  # mock 渠道签名密钥；为空则 mock 渠道不可用
+  pay-mock-secret: ${PAY_MOCK_SECRET:}
+  order-expire-minutes: ${ORDER_EXPIRE_MINUTES:30}
+  # 订单卡密明文加密密钥（Base64 32 字节）；为空则从 KEY_HMAC_SECRET 派生
+  data-enc-key: ${DATA_ENC_KEY:}
+  # 客户端版本清单 / 强制更新
+  update-enabled: ${UPDATE_ENABLED:false}
+  update-latest-version: ${UPDATE_LATEST_VERSION:}
+  update-min-version: ${UPDATE_MIN_VERSION:}
+  update-download-url: ${UPDATE_DOWNLOAD_URL:}
+  update-sha256: ${UPDATE_SHA256:}
+  update-notes: ${UPDATE_NOTES:}
+  update-published-at: ${UPDATE_PUBLISHED_AT:0}
+  releases-dir: ${RELEASES_DIR:./data/releases}
+  update-max-file-mb: ${UPDATE_MAX_FILE_MB:300}
+  # 公开下单/卡片接口单 IP 每分钟上限
+  public-rate-limit-per-minute: ${PUBLIC_RATE_LIMIT:60}
+  # 短链跳转单 IP 每分钟上限
+  redirect-rate-limit-per-minute: ${REDIRECT_RATE_LIMIT:120}
+  # 授权心跳单 IP 每分钟上限（多设备共用出口 IP 时调大）
+  heartbeat-rate-limit-per-minute: ${HEARTBEAT_RATE_LIMIT:240}
+  # 只有前面是可信代理时才信任 X-Forwarded-For
+  trust-forwarded-for: ${TRUST_FORWARDED_FOR:false}
+  trusted-proxies: ${TRUSTED_PROXIES:}
+  # 生产启动时强制检查 PUBLIC_BASE_URL
+  require-public-url: ${REQUIRE_PUBLIC_URL:false}
+  require-https-public-url: ${REQUIRE_HTTPS_PUBLIC_URL:false}
+  # 跳转点击明细保留天数（0 = 不清理）
+  jump-click-retention-days: ${JUMP_CLICK_RETENTION_DAYS:90}
+  # 同卡片同 IP 去重窗口（秒，0 = 不去重）
+  jump-click-dedupe-seconds: ${JUMP_CLICK_DEDUPE_SECONDS:60}
+
+logging:
+  level:
+    root: INFO
+    com.zmtjl.license: INFO

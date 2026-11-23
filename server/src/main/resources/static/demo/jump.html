@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>跳转成功 · 跳转卡测试</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, #eef4ff 0%, #f7f9fc 45%, #eaf7f1 100%);
+      color: #1f2937;
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      width: 100%; max-width: 460px;
+      background: #fff; border-radius: 16px; padding: 32px 28px;
+      box-shadow: 0 18px 50px rgba(31, 41, 55, 0.12);
+      border: 1px solid #e5eaf2;
+    }
+    .badge {
+      display: inline-block; padding: 4px 10px; border-radius: 999px;
+      background: #e7f8ef; color: #0f9d58; font-size: 12px; font-weight: 600;
+      margin-bottom: 14px;
+    }
+    h1 { font-size: 22px; margin: 0 0 8px; }
+    .lead { font-size: 14px; color: #6b7280; margin: 0 0 22px; line-height: 1.6; }
+    dl {
+      margin: 0 0 24px; padding: 16px 18px; border-radius: 10px;
+      background: #f7f9fc; border: 1px solid #edf0f5;
+      display: grid; grid-template-columns: 76px 1fr; gap: 10px 12px;
+      font-size: 13px;
+    }
+    dt { color: #8b93a1; }
+    dd { margin: 0; word-break: break-all; color: #111827; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .actions { display: flex; gap: 10px; }
+    button {
+      flex: 1; height: 38px; border-radius: 8px; font-size: 13px; cursor: pointer;
+      border: 1px solid #dbe1ea; background: #fff; color: #374151;
+    }
+    button.primary { border: none; background: #2563eb; color: #fff; }
+    .foot { margin-top: 16px; font-size: 11px; color: #9aa3b2; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">302 跳转成功</div>
+    <h1>跳转卡测试页</h1>
+    <p class="lead">你是通过服务端短链跳转过来的。这个页面用于本地验证跳转卡是否生效。</p>
+
+    <dl>
+      <dt>短链标识</dt>
+      <dd class="mono" id="code">-</dd>
+      <dt>来源参数</dt>
+      <dd id="from">-</dd>
+      <dt>跳转时间</dt>
+      <dd id="time">-</dd>
+      <dt>当前地址</dt>
+      <dd class="mono" id="path">-</dd>
+    </dl>
+
+    <div class="actions">
+      <button onclick="history.back()">返回上一页</button>
+      <button class="primary" onclick="location.href='/admin.html'">打开管理后台</button>
+    </div>
+
+    <p class="foot">
+      测试方法：回到管理后台「跳转卡」页签，看 DEMO01 的点击次数是否 +1；
+      再到「详情」里能看到这次点击的 IP 和 User-Agent。
+    </p>
+  </div>
+
+  <script>
+    const p = new URLSearchParams(location.search);
+    document.getElementById('code').textContent = p.get('short') || 'DEMO01';
+    document.getElementById('from').textContent = p.get('from') || '（无）';
+    document.getElementById('time').textContent = new Date().toLocaleString('zh-CN');
+    document.getElementById('path').textContent = location.pathname + location.search;
+  </script>
+</body>
+</html>

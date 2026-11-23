@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <title>添加微信</title>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    [hidden] { display: none !important; }
+    body {
+      margin: 0; min-height: 100vh;
+      font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(160deg, #f2fbf5 0%, #f7f9fc 50%, #eef6ff 100%);
+      color: #1f2937;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 22px 16px 40px;
+    }
+    .card {
+      width: 100%; max-width: 420px;
+      background: #fff; border-radius: 18px; padding: 26px 22px 22px;
+      box-shadow: 0 18px 50px rgba(31, 41, 55, 0.12);
+      border: 1px solid #e4eaf2;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
+    }
+    .logo {
+      width: 38px; height: 38px; border-radius: 11px;
+      background: #07c160; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 700;
+    }
+    .brand h1 { font-size: 18px; margin: 0; }
+    .brand p { margin: 2px 0 0; font-size: 12px; color: #8b93a1; }
+
+    .qr-wrap {
+      border: 1px solid #edf0f5; border-radius: 14px; background: #fafbfd;
+      padding: 18px; text-align: center; margin-bottom: 18px;
+    }
+    .qr-wrap img {
+      width: 200px; height: 200px; object-fit: contain; border-radius: 10px;
+      background: #fff; display: block; margin: 0 auto;
+    }
+    .qr-placeholder {
+      width: 200px; height: 200px; margin: 0 auto;
+      border: 1.5px dashed #cfd7e3; border-radius: 12px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; color: #9aa3b2; font-size: 12px; background: #fff;
+    }
+    .qr-placeholder .icon { font-size: 30px; }
+    .qr-caption { margin: 12px 0 0; font-size: 12px; color: #6b7280; line-height: 1.6; }
+
+    .divider {
+      display: flex; align-items: center; gap: 10px;
+      color: #b0b8c6; font-size: 11px; margin: 16px 0;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: #e8edf4;
+    }
+
+    .wxid-box {
+      display: flex; align-items: center; gap: 10px;
+      background: #f6f8fb; border: 1px solid #e8edf4; border-radius: 12px;
+      padding: 10px 12px;
+    }
+    .wxid {
+      flex: 1; min-width: 0;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 17px; font-weight: 600; letter-spacing: 0.3px;
+      word-break: break-all; user-select: text;
+    }
+    .copy-btn {
+      flex-shrink: 0; height: 34px; padding: 0 14px;
+      border: none; border-radius: 8px; background: #07c160; color: #fff;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+    }
+    .copy-btn:active { opacity: .85; }
+
+    .steps {
+      margin: 18px 0 0; padding: 0; list-style: none;
+      display: flex; flex-direction: column; gap: 9px;
+    }
+    .steps li {
+      display: flex; gap: 9px; font-size: 12.5px; color: #5b6472; line-height: 1.55;
+    }
+    .steps b {
+      flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
+      background: #e7f8ef; color: #0f9d58; font-size: 11px;
+      display: flex; align-items: center; justify-content: center;
+      margin-top: 1px;
+    }
+
+    .setup-tip {
+      margin: 0 0 16px; padding: 10px 12px; border-radius: 9px;
+      background: #fff7e8; border: 1px solid #ffe2b3; color: #9a6a12;
+      font-size: 12px; line-height: 1.6;
+    }
+    .foot {
+      margin-top: 18px; font-size: 11px; color: #a3aab8; line-height: 1.7; text-align: center;
+    }
+
+    .toast {
+      position: fixed; left: 50%; bottom: 48px; transform: translateX(-50%) translateY(10px);
+      background: rgba(17, 24, 39, 0.9); color: #fff; font-size: 13px;
+      padding: 9px 16px; border-radius: 999px; opacity: 0; pointer-events: none;
+      transition: all .22s ease; white-space: nowrap; z-index: 9;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div id="setup-tip" class="setup-tip" hidden>
+      这是演示占位页：请把短链目标地址里的 <b>wxid</b> 换成你的微信号，
+      可选再传 <b>qr</b>（二维码图片的公网地址）。
+    </div>
+
+    <header class="brand">
+      <div class="logo">微</div>
+      <div>
+        <h1 id="title">添加微信</h1>
+        <p id="subtitle">长按识别二维码，或复制微信号添加</p>
+      </div>
+    </header>
+
+    <section class="qr-wrap">
+      <img id="qr" alt="微信二维码" hidden>
+      <div id="qr-placeholder" class="qr-placeholder">
+        <div class="icon">▦</div>
+        <div>二维码图片未配置</div>
+      </div>
+      <p class="qr-caption" id="qr-caption">长按二维码保存，再到微信「扫一扫 → 相册」识别</p>
+    </section>
+
+    <div class="divider">或者复制微信号</div>
+
+    <div class="wxid-box">
+      <div class="wxid" id="wxid">-</div>
+      <button class="copy-btn" id="copy">复制</button>
+    </div>
+
+    <ol class="steps">
+      <li><b>1</b><span>点「复制」，复制上面的微信号</span></li>
+      <li><b>2</b><span>打开微信，点右上角「+」→「添加朋友」</span></li>
+      <li><b>3</b><span>在搜索框粘贴微信号，点搜索并添加</span></li>
+    </ol>
+
+    <p class="foot" id="foot">
+      添加后回复「资料」，我会尽快通过。
+    </p>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const params = new URLSearchParams(location.search);
+
+    const wxid = (params.get('wxid') || '').trim();
+    const qr = (params.get('qr') || '').trim();
+    const title = (params.get('title') || '').trim();
+    const name = (params.get('name') || '').trim();
+    const tip = (params.get('tip') || '').trim();
+
+    if (title) $('title').textContent = title;
+    if (name) $('subtitle').textContent = name + ' · 长按识别二维码或复制微信号';
+    if (tip) $('foot').textContent = tip;
+
+    const placeholder = !wxid || wxid === 'YOUR_WECHAT_ID';
+    if (placeholder) $('setup-tip').hidden = false;
+    $('wxid').textContent = wxid || 'YOUR_WECHAT_ID';
+
+    let toastTimer = null;
+    function toast(msg) {
+      const el = $('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+    if (qr && /^https?:\/\//i.test(qr)) {
+      const img = $('qr');
+      img.onload = () => {
+        img.hidden = false;
+        $('qr-placeholder').hidden = true;
+      };
+      img.onerror = () => {
+        $('qr-caption').textContent = '二维码图片加载失败，请直接复制微信号添加';
+      };
+      img.src = qr;
+    }
+
+    async function copyWxid() {
+      const text = wxid || 'YOUR_WECHAT_ID';
+      try {
+        await navigator.clipboard.writeText(text);
+        toast('微信号已复制');
+        return;
+      } catch {}
+
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, text.length);
+        const ok = document.execCommand('copy');
+        ta.remove();
+        toast(ok ? '微信号已复制' : '请长按微信号手动复制');
+      } catch {
+        toast('请长按微信号手动复制');
+      }
+    }
+
+    $('copy').addEventListener('click', copyWxid);
+  </script>
+</body>
+</html>

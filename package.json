@@ -1,0 +1,91 @@
+{
+  "name": "shantuo-desktop",
+  "version": "1.0.1",
+  "private": true,
+  "description": "闪拓 · 抖音多账号增长助手（Windows 桌面版）",
+  "author": "shantuo",
+  "main": "apps/main/index.js",
+  "type": "module",
+  "scripts": {
+    "predev": "node build/apply-sdk-patches.mjs",
+    "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && electron .\"",
+    "dev:renderer": "vite",
+    "prestart": "node build/apply-sdk-patches.mjs",
+    "start": "electron .",
+    "build": "vite build",
+    "patch:sdk": "node build/apply-sdk-patches.mjs",
+    "predist": "node build/apply-sdk-patches.mjs",
+    "test": "echo \"Tests are not included in this public export\"",
+    "icon": "node build/make-icon.mjs",
+    "audit:asar": "node build/audit-asar.mjs",
+    "fuses": "node build/fuses.mjs",
+    "dist": "node build/build-win.mjs",
+    "sign:win": "node build/sign-win.mjs",
+    "cert:self": "powershell -NoProfile -ExecutionPolicy Bypass -File build/make-selfsign-cert.ps1",
+    "cert:trust": "powershell -NoProfile -ExecutionPolicy Bypass -File build/install-selfsign-cert.ps1 -TrustRoot"
+  },
+  "dependencies": {
+    "douyin-im": "^1.1.0",
+    "element-plus": "^2.8.0",
+    "https-proxy-agent": "^7.0.6",
+    "undici": "^7.30.1",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@electron/asar": "^4.3.1",
+    "@electron/fuses": "^2.1.3",
+    "@vitejs/plugin-vue": "^5.1.0",
+    "concurrently": "^9.0.0",
+    "electron": "^45.0.0",
+    "electron-builder": "^25.0.0",
+    "vite": "^5.4.0",
+    "wait-on": "^8.0.0"
+  },
+  "build": {
+    "appId": "com.shantuo.desktop",
+    "productName": "闪拓",
+    "copyright": "Copyright © 2026",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "asar": true,
+    "files": [
+      "apps/main/**/*",
+      "apps/preload/**/*",
+      "packages/**/*",
+      "dist/**/*",
+      "package.json",
+      "!**/*.map",
+      "!**/node_modules/**/{test,__tests__,tests,powered-test,example,examples}/**",
+      "!**/node_modules/**/*.{md,markdown,txt}"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false,
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "闪拓",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true
+    }
+  }
+}

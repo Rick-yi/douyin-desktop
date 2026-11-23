@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>授权服务管理 · 登录</title>
+<style>
+  :root { --bg:#f5f6f8; --card:#fff; --border:#e3e8ef; --text:#1f2329; --muted:#6b7280;
+          --primary:#2f6fd0; --danger:#c0392b; }
+  * { box-sizing: border-box; }
+  html, body { height:100%; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+         background:var(--bg); color:var(--text); font-size:13px;
+         display:flex; align-items:center; justify-content:center; padding:24px; }
+  .login { width:100%; max-width:380px; background:var(--card); border:1px solid var(--border);
+           border-radius:10px; padding:28px 28px 24px; box-shadow:0 12px 36px rgba(31,41,55,.08); }
+  .brand { font-size:17px; font-weight:600; margin:0 0 6px; }
+  .sub { color:var(--muted); font-size:12px; line-height:1.7; margin:0 0 22px; }
+  label { display:block; font-size:11px; color:var(--muted); margin-bottom:6px; }
+  input { width:100%; height:38px; padding:0 11px; border:1px solid var(--border); border-radius:6px;
+          font-size:13px; font-family:ui-monospace, Consolas, monospace; outline:none; background:#fff; }
+  input:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(47,111,208,.12); }
+  button { width:100%; height:38px; margin-top:14px; border:1px solid var(--primary); border-radius:6px;
+           background:var(--primary); color:#fff; font-size:13px; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:default; }
+  .err { min-height:18px; margin-top:10px; color:var(--danger); font-size:12px; line-height:1.6; }
+  .hint { margin-top:16px; color:var(--muted); font-size:11px; line-height:1.7; }
+</style>
+</head>
+<body>
+<main class="login">
+  <h1 class="brand">授权服务管理</h1>
+  <p class="sub">输入管理令牌后进入后台。令牌只保存在当前标签页，关闭标签页即失效。</p>
+  <form id="form" autocomplete="off">
+    <label for="token">ADMIN_TOKEN</label>
+    <input id="token" type="password" placeholder="请输入管理令牌" autocomplete="off"
+           spellcheck="false" autocapitalize="off" required>
+    <button id="submit" type="submit">进入后台</button>
+    <div id="err" class="err" role="alert"></div>
+  </form>
+  <p class="hint">令牌不会出现在地址栏，也不会写入 localStorage。换浏览器或新标签页需要重新输入。</p>
+</main>
+<script>
+const STORAGE_KEY = 'licenseAdminToken';
+const $ = (id) => document.getElementById(id);
+
+// 旧版本曾把令牌写入 localStorage，这里主动清掉，避免残留。
+try { localStorage.removeItem(STORAGE_KEY); } catch {}
+
+function showError(msg) {
+  $('err').textContent = msg || '';
+}
+
+async function verify(token) {
+  const r = await fetch('/v1/admin/products', {
+    headers: { 'X-Admin-Token': token, 'Accept': 'application/json' },
+    cache: 'no-store',
+  });
+  if (r.ok) return;
+  let msg = '';
+  try {
+    const body = await r.json();
+    msg = body && (body.message || body.error);
+  } catch {}
+  if (r.status === 401) throw new Error('令牌无效，请检查后重试');
+  if (r.status === 429) throw new Error('尝试过于频繁，请 5 分钟后再试');
+  if (r.status === 503) throw new Error('管理接口未启用（服务端未配置 ADMIN_TOKEN）');
+  throw new Error(msg || ('登录失败：HTTP ' + r.status));
+}
+
+async function enter(token) {
+  await verify(token);
+  sessionStorage.setItem(STORAGE_KEY, token);
+  // 用 replace，避免后退回到仍带着输入框的登录页
+  location.replace('/admin.html');
+}
+
+$('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const token = $('token').value.trim();
+  showError('');
+  if (!token) { showError('请输入管理令牌'); return; }
+
+  const btn = $('submit');
+  btn.disabled = true;
+  btn.textContent = '验证中…';
+  try {
+    await enter(token);
+  } catch (err) {
+    $('token').value = '';
+    showError(err.message || '登录失败');
+    btn.disabled = false;
+    btn.textContent = '进入后台';
+    $('token').focus();
+  }
+});
+
+// 同一标签页已有会话时直接验证并进入后台
+const existing = sessionStorage.getItem(STORAGE_KEY);
+if (existing) {
+  enter(existing).catch(() => {
+    sessionStorage.removeItem(STORAGE_KEY);
+    $('token').focus();
+  });
+} else {
+  $('token').focus();
+}
+</script>
+</body>
+</html>

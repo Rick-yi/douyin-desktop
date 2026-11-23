@@ -1,0 +1,51 @@
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    environment:
+      MYSQL_DATABASE: zmtjl_license
+      MYSQL_USER: ${DB_USER:-zmtjl}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD}
+      TZ: Asia/Shanghai
+    volumes:
+      - mysqldata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8089:8089"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: ${DB_URL:-jdbc:mysql://db:3306/zmtjl_license?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false}
+      DB_USER: ${DB_USER:-zmtjl}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?set ADMIN_TOKEN}
+      KEY_HMAC_SECRET: ${KEY_HMAC_SECRET:?set KEY_HMAC_SECRET}
+      DATA_ENC_KEY: ${DATA_ENC_KEY:?set DATA_ENC_KEY}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8089}
+      PAY_CHANNELS: ${PAY_CHANNELS:-manual}
+      TRUST_FORWARDED_FOR: ${TRUST_FORWARDED_FOR:-false}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1,::1}
+      KEYS_DIR: /app/keys
+    volumes:
+      - keys:/app/keys
+      - logs:/app/data
+
+volumes:
+  mysqldata:
+  keys:
+  logs:
