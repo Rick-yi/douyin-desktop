@@ -55,7 +55,7 @@ app:
   keys-dir: ${KEYS_DIR:./data/keys}
   activate-rate-limit-per-minute: ${ACTIVATE_RATE_LIMIT:10}
   # 对外地址：用于拼接支付回调/收银台
-  public-base-url: ${PUBLIC_BASE_URL:http://localhost:8080}
+  public-base-url: ${PUBLIC_BASE_URL:http://127.0.0.1:8089}
   # 启用哪些支付渠道（逗号分隔）。生产只写实际接入的：manual,wechat,alipay,zpay...
   pay-channels: ${PAY_CHANNELS:manual}
   # mock 渠道签名密钥；为空则 mock 渠道不可用
