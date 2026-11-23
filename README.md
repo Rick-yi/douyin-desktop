@@ -28,6 +28,12 @@ Windows 桌面版抖音多账号管理工具 + 卡密授权服务端。
 | `server` | Spring Boot 授权服务端 |
 | `build` | 图标、打包、签名脚本 |
 
+## 文档
+
+- [架构说明](docs/ARCHITECTURE.md)：客户端/服务端/SDK/授权/数据流
+- [生产部署步骤](docs/DEPLOYMENT.md)：从零到 HTTPS、MySQL、systemd、Nginx、备份
+- [服务端 README](server/README.md)：服务端配置与排错
+
 ---
 
 ## 2. 环境要求
@@ -333,6 +339,7 @@ server/
   .env.example
   docker-compose.example.yml
 build/          图标、打包、签名脚本
+docs/           架构、部署、运维说明
 ```
 
 ---

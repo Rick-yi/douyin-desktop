@@ -27,7 +27,7 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "8089:8089"
+      - "127.0.0.1:8089:8089"   # 只给本机反代，不直接暴露公网
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_URL: ${DB_URL:-jdbc:mysql://db:3306/zmtjl_license?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false}
@@ -38,8 +38,8 @@ services:
       DATA_ENC_KEY: ${DATA_ENC_KEY:?set DATA_ENC_KEY}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8089}
       PAY_CHANNELS: ${PAY_CHANNELS:-manual}
-      TRUST_FORWARDED_FOR: ${TRUST_FORWARDED_FOR:-false}
-      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1,::1}
+      TRUST_FORWARDED_FOR: ${TRUST_FORWARDED_FOR:-true}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-172.16.0.0/12}
       KEYS_DIR: /app/keys
     volumes:
       - keys:/app/keys
